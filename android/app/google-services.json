@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "841947643133",
+    "project_id": "dunia-kopi-app",
+    "storage_bucket": "dunia-kopi-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841947643133:android:2ddf11a7ac3b1eef549294",
+        "android_client_info": {
+          "package_name": "com.example.duniakopi_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWpCOu3WuWmq4SYp_UPvsP53bBr80eo0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
