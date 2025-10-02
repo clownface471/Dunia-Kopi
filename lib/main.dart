@@ -1,5 +1,5 @@
 import 'package:duniakopi_project/app/core/theme/app_theme.dart';
-import 'package:duniakopi_project/app/presentation/screens/main_nav_screen.dart';
+import 'package:duniakopi_project/app/presentation/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +22,8 @@ class MyApp extends StatelessWidget {
       title: 'Dunia Kopi',
       theme: AppTheme.vintageTheme,
       debugShowCheckedModeBanner: false,
-      home: const MainNavScreen(), // <-- UBAH DI SINI
+      home: const SplashScreen(), 
     );
   }
 }
+

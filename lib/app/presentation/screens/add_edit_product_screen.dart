@@ -25,6 +25,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   final _roastLevelController = TextEditingController();
   final _tastingNotesController = TextEditingController();
   final _stockController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
   final _variantWeightController = TextEditingController();
   final _variantPriceController = TextEditingController();
@@ -36,7 +37,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   String? _networkImageUrl;
   bool _isUploading = false;
 
-  final NumberFormat _currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final NumberFormat _currencyFormatter =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       _roastLevelController.text = widget.product!.roastLevel;
       _tastingNotesController.text = widget.product!.tastingNotes;
       _stockController.text = widget.product!.stock.toString();
+      _descriptionController.text = widget.product!.description;
       _networkImageUrl = widget.product!.imageUrl;
       setState(() {
         _variants.addAll(widget.product!.variants);
@@ -61,6 +64,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
     _roastLevelController.dispose();
     _tastingNotesController.dispose();
     _stockController.dispose();
+    _descriptionController.dispose();
     _variantWeightController.dispose();
     _variantPriceController.dispose();
     super.dispose();
@@ -116,7 +120,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
     if (_formKey.currentState!.validate()) {
       if (_variants.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Tambahkan minimal satu varian harga.")),
+          const SnackBar(
+              content: Text("Tambahkan minimal satu varian harga.")),
         );
         return;
       }
@@ -135,6 +140,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
         roastLevel: _roastLevelController.text,
         tastingNotes: _tastingNotesController.text,
         stock: int.tryParse(_stockController.text) ?? 0,
+        description: _descriptionController.text,
         imageUrl: _networkImageUrl!,
         variants: _variants,
       );
@@ -234,6 +240,16 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 controller: _tastingNotesController,
                 decoration:
                     const InputDecoration(labelText: "Profil Rasa (Tasting Notes)"),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: "Deskripsi Produk",
+                  alignLabelWithHint: true,
+                ),
+                maxLines: 5,
+                keyboardType: TextInputType.multiline,
               ),
               const SizedBox(height: 16),
               TextFormField(
