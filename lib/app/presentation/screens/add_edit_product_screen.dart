@@ -1,9 +1,12 @@
 import 'package:duniakopi_project/app/core/theme/app_colors.dart';
+import 'package:duniakopi_project/app/core/utils/currency_input_formatter.dart';
 import 'package:duniakopi_project/app/data/models/product_model.dart';
 import 'package:duniakopi_project/app/data/services/firestore_service.dart';
+import 'package:duniakopi_project/app/data/services/image_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 class AddEditProductScreen extends ConsumerStatefulWidget {
   final ProductModel? product;
@@ -11,7 +14,8 @@ class AddEditProductScreen extends ConsumerStatefulWidget {
   const AddEditProductScreen({super.key, this.product});
 
   @override
-  ConsumerState<AddEditProductScreen> createState() => _AddEditProductScreenState();
+  ConsumerState<AddEditProductScreen> createState() =>
+      _AddEditProductScreenState();
 }
 
 class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
@@ -28,6 +32,12 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
 
   bool get _isEditing => widget.product != null;
 
+  Uint8List? _selectedImageBytes;
+  String? _networkImageUrl;
+  bool _isUploading = false;
+
+  final NumberFormat _currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +47,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       _roastLevelController.text = widget.product!.roastLevel;
       _tastingNotesController.text = widget.product!.tastingNotes;
       _stockController.text = widget.product!.stock.toString();
+      _networkImageUrl = widget.product!.imageUrl;
       setState(() {
         _variants.addAll(widget.product!.variants);
       });
@@ -56,16 +67,48 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   }
 
   void _addVariant() {
-    if (_variantWeightController.text.isNotEmpty && _variantPriceController.text.isNotEmpty) {
+    if (_variantWeightController.text.isNotEmpty &&
+        _variantPriceController.text.isNotEmpty) {
+      final String priceText = _variantPriceController.text.replaceAll('.', '');
       setState(() {
         _variants.add(ProductVariant(
           weight: _variantWeightController.text,
-          price: int.parse(_variantPriceController.text),
+          price: int.parse(priceText),
         ));
       });
       _variantWeightController.clear();
       _variantPriceController.clear();
       FocusScope.of(context).unfocus();
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final imageService = ref.read(imageServiceProvider);
+    final imageFile = await imageService.pickImage();
+
+    if (imageFile != null) {
+      final imageBytes = await imageFile.readAsBytes();
+      setState(() {
+        _selectedImageBytes = imageBytes;
+        _isUploading = true;
+      });
+
+      final imageUrl = await imageService.uploadImage(imageFile);
+      if (imageUrl != null) {
+        setState(() {
+          _networkImageUrl = imageUrl;
+          _isUploading = false;
+        });
+      } else {
+        setState(() {
+          _isUploading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Gagal mengunggah gambar.")),
+          );
+        }
+      }
     }
   }
 
@@ -78,6 +121,13 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
         return;
       }
 
+      if (_networkImageUrl == null || _networkImageUrl!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Harap unggah gambar produk.")),
+        );
+        return;
+      }
+
       final productData = ProductModel(
         id: _isEditing ? widget.product!.id : null,
         name: _nameController.text,
@@ -85,6 +135,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
         roastLevel: _roastLevelController.text,
         tastingNotes: _tastingNotesController.text,
         stock: int.tryParse(_stockController.text) ?? 0,
+        imageUrl: _networkImageUrl!,
         variants: _variants,
       );
 
@@ -120,10 +171,53 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              GestureDetector(
+                onTap: _pickAndUploadImage,
+                child: AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: AppColors.primary.withAlpha(128)),
+                      image: _selectedImageBytes != null
+                          ? DecorationImage(
+                              image: MemoryImage(_selectedImageBytes!),
+                              fit: BoxFit.cover,
+                            )
+                          : (_networkImageUrl != null &&
+                                  _networkImageUrl!.isNotEmpty)
+                              ? DecorationImage(
+                                  image: NetworkImage(_networkImageUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                    ),
+                    child: _isUploading
+                        ? const Center(child: CircularProgressIndicator())
+                        : (_networkImageUrl == null ||
+                                _networkImageUrl!.isEmpty)
+                            ? const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_a_photo_outlined, size: 40),
+                                    SizedBox(height: 8),
+                                    Text("Unggah Gambar Produk"),
+                                  ],
+                                ),
+                              )
+                            : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: "Nama Kopi"),
-                validator: (value) => value!.isEmpty ? 'Nama tidak boleh kosong' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Nama tidak boleh kosong' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -138,7 +232,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _tastingNotesController,
-                decoration: const InputDecoration(labelText: "Profil Rasa (Tasting Notes)"),
+                decoration:
+                    const InputDecoration(labelText: "Profil Rasa (Tasting Notes)"),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -146,14 +241,15 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 decoration: const InputDecoration(labelText: "Stok Awal"),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) => value!.isEmpty ? 'Stok tidak boleh kosong' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Stok tidak boleh kosong' : null,
               ),
               const SizedBox(height: 24),
               Divider(color: AppColors.primary.withAlpha(128)),
               const SizedBox(height: 16),
               Text("Varian Harga", style: Theme.of(context).textTheme.titleLarge),
               ..._variants.map((variant) => ListTile(
-                    title: Text("${variant.weight} - Rp ${variant.price}"),
+                    title: Text("${variant.weight}gr - ${_currencyFormatter.format(variant.price)}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                       onPressed: () => setState(() => _variants.remove(variant)),
@@ -165,16 +261,26 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _variantWeightController,
-                      decoration: const InputDecoration(labelText: "Berat (cth: 100gr)"),
+                      decoration: const InputDecoration(
+                        labelText: "Berat",
+                        suffixText: "gr",
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _variantPriceController,
-                      decoration: const InputDecoration(labelText: "Harga (cth: 50000)"),
+                      decoration: const InputDecoration(
+                          labelText: "Harga",
+                          prefixText: "Rp "),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        CurrencyInputFormatter(),
+                      ],
                     ),
                   ),
                 ],
@@ -202,9 +308,9 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 child: Text(
                   _isEditing ? "Simpan Perubahan" : "Simpan Produk",
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ),
             ],
@@ -214,3 +320,4 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
     );
   }
 }
+

@@ -72,13 +72,21 @@ class ProductListItem extends ConsumerWidget {
           aspectRatio: 1,
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).colorScheme.background,
               borderRadius: BorderRadius.circular(8),
+              image: product.imageUrl.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(product.imageUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Icon(
-              Icons.coffee,
-              color: Theme.of(context).primaryColor.withOpacity(0.5),
-            ),
+            child: product.imageUrl.isEmpty
+                ? Icon(
+                    Icons.coffee,
+                    color: Theme.of(context).primaryColor.withOpacity(0.5),
+                  )
+                : null,
           ),
         ),
         title: Text(
