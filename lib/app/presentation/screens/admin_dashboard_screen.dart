@@ -1,47 +1,60 @@
-import 'package:duniakopi_project/app/data/services/firestore_service.dart';
-import 'package:duniakopi_project/app/presentation/widgets/product_list_item.dart';
-import 'package:duniakopi_project/app/presentation/screens/add_edit_product_screen.dart';
+import 'package:duniakopi_project/app/presentation/screens/admin_orders_screen.dart';
+import 'package:duniakopi_project/app/presentation/screens/admin_products_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final productsAsyncValue = ref.watch(productsProvider);
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Manajemen Produk")),
-      body: productsAsyncValue.when(
-        data: (products) {
-          if (products.isEmpty) {
-            return const Center(child: Text("Belum ada produk."));
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return ProductListItem(
-                product: product,
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text("Error: $err")),
+      appBar: AppBar(
+        title: const Text("Dasbor Admin"),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AddEditProductScreen(),
-            ),
-          );
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      body: GridView.count(
+        padding: const EdgeInsets.all(24.0),
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        children: [
+          _buildDashboardCard(
+            context,
+            icon: Icons.coffee,
+            label: "Manajemen Produk",
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const AdminProductsScreen(),
+              ));
+            },
+          ),
+          _buildDashboardCard(
+            context,
+            icon: Icons.receipt_long,
+            label: "Manajemen Pesanan",
+            onTap: () {
+               Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const AdminOrdersScreen(),
+              ));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardCard(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48, color: Theme.of(context).primaryColor),
+            const SizedBox(height: 16),
+            Text(label, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

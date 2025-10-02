@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:duniakopi_project/app/data/models/product_model.dart';
 
 class CartItemModel {
-  final String id; // ID unik untuk item di keranjang
+  final String id;
   final String productId;
   final String productName;
   final String imageUrl;
@@ -37,6 +37,17 @@ class CartItemModel {
       imageUrl: data['imageUrl'] ?? '',
       selectedVariant: ProductVariant.fromMap(data['selectedVariant']),
       quantity: data['quantity'] ?? 0,
+    );
+  }
+  
+  factory CartItemModel.fromMap(Map<String, dynamic> map) {
+    return CartItemModel(
+      id: '', 
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      imageUrl: map['imageUrl'] ?? '',
+      selectedVariant: ProductVariant.fromMap(map['selectedVariant']),
+      quantity: map['quantity'] ?? 0,
     );
   }
 }

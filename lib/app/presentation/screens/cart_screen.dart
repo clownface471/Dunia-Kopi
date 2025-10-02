@@ -1,4 +1,5 @@
 import 'package:duniakopi_project/app/presentation/providers/cart_provider.dart';
+import 'package:duniakopi_project/app/presentation/screens/checkout_screen.dart';
 import 'package:duniakopi_project/app/presentation/widgets/cart_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +74,10 @@ class CartScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    // Logika untuk checkout akan ditambahkan di sini
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (context) => const CheckoutScreen()),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,

@@ -29,6 +29,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userRole = ref.watch(userRoleProvider).value;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product.name),
@@ -120,47 +122,51 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton.icon(
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          label: const Text("Tambah ke Keranjang"),
-          onPressed: () {
-            final userId = ref.read(authStateProvider).value?.uid;
-            if (userId != null && _selectedVariant != null) {
-              ref.read(cartServiceProvider).addItem(userId, widget.product, _selectedVariant!);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      '${widget.product.name} (${_selectedVariant!.weight}gr) ditambahkan ke keranjang.'),
-                  duration: const Duration(seconds: 2),
+      bottomNavigationBar: userRole != 'admin'
+          ? Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                icon:
+                    const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+                label: const Text("Tambah ke Keranjang"),
+                onPressed: () {
+                  final userId = ref.read(authStateProvider).value?.uid;
+                  if (userId != null && _selectedVariant != null) {
+                    ref.read(cartServiceProvider).addItem(
+                        userId, widget.product, _selectedVariant!);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            '${widget.product.name} (${_selectedVariant!.weight}gr) ditambahkan ke keranjang.'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (userId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Silakan login terlebih dahulu.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Silakan pilih varian terlebih dahulu.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              );
-            } else if (userId == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Silakan login terlebih dahulu.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Silakan pilih varian terlebih dahulu.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle:
-                const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
+              ),
+            )
+          : null,
     );
   }
 
