@@ -17,6 +17,9 @@ dependencies:
   image_picker: ^1.1.2 
   cloudinary_public: ^0.23.1
   intl: ^0.19.0
+  midtrans_sdk: ^1.0.1
+  cloud_functions: ^5.6.2
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:

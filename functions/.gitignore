@@ -1,0 +1,5 @@
+node_modules/
+*.local
+
+# Ignore environment variables file
+.env
