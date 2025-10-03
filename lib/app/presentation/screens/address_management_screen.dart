@@ -18,7 +18,6 @@ class AddressManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final addressesAsync = ref.watch(addressesProvider);
-    final userId = ref.watch(authStateProvider).value?.uid;
 
     return Scaffold(
       appBar: AppBar(

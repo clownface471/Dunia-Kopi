@@ -20,7 +20,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isLoading = false;
   final String _backendUrl =
-      "https://dunia-kopi-backend.vercel.app/create-transaction";
+      "https://dunia-kopi-backend.vercel.app/api/create-transaction";
   final PaymentService _paymentService = PaymentService();
 
   Future<void> _processPayment() async {
@@ -51,9 +51,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         Uri.parse(_backendUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'orderId': orderId,
-          'amount': totalPrice,
-          'customerDetails': {
+          'transaction_details': {
+            'order_id': orderId,
+            'gross_amount': totalPrice.toInt(),
+          },
+          'customer_details': {
             'first_name': customerName,
             'email': customerEmail,
           },
