@@ -39,7 +39,6 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
           : widget.address!.phoneNumber;
       _addressController.text = widget.address!.fullAddress;
       _postalCodeController.text = widget.address!.postalCode;
-      // Note: Pre-selecting dropdowns will be handled once data is loaded
     }
   }
 
@@ -64,7 +63,9 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
         phoneNumber: '+62${_phoneController.text}',
         fullAddress: _addressController.text,
         city: _selectedCity!.cityName,
+        cityId: _selectedCity!.cityId,
         province: _selectedProvince!.provinceName,
+        provinceId: _selectedProvince!.provinceId,
         postalCode: _postalCodeController.text,
       );
 
@@ -77,7 +78,11 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
         }
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
-        // ... error handling ...
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Gagal menyimpan alamat: $e")),
+          );
+        }
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -157,7 +162,9 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                   : ElevatedButton(
                       onPressed: _saveAddress,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16)
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
                       ),
                       child: const Text("Simpan Alamat"),
                     ),
@@ -222,4 +229,3 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
     );
   }
 }
-

@@ -1,5 +1,7 @@
 import 'package:duniakopi_project/app/data/services/auth_service.dart';
 import 'package:duniakopi_project/app/presentation/screens/address_management_screen.dart';
+import 'package:duniakopi_project/app/presentation/screens/debug_user_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,6 +51,24 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ),
               const Divider(),
+              
+              // Debug button (only show in debug mode)
+              if (kDebugMode) ...[
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.bug_report, color: Colors.orange),
+                  title: const Text("Debug User Data"),
+                  subtitle: const Text("Perbaiki masalah user document"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const DebugUserScreen(),
+                    ));
+                  },
+                ),
+                const Divider(),
+              ],
+              
               const SizedBox(height: 50),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -69,9 +89,32 @@ class ProfileScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => const Center(child: Text("Terjadi kesalahan")),
+        error: (e, st) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text("Terjadi kesalahan memuat profil"),
+              const SizedBox(height: 8),
+              Text(
+                e.toString(),
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const DebugUserScreen(),
+                  ));
+                },
+                child: const Text("Buka Debug Tool"),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
-

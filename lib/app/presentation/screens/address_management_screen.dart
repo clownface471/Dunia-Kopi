@@ -32,13 +32,64 @@ class AddressManagementScreen extends ConsumerWidget {
             itemCount: addresses.length,
             itemBuilder: (context, index) {
               final address = addresses[index];
+              final needsUpdate = !address.hasShippingData;
+              
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
-                  title: Text(address.recipientName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("${address.fullAddress}, ${address.city}, ${address.postalCode}"),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          address.recipientName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      if (needsUpdate)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Perlu Update',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange.shade900,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text("${address.fullAddress}, ${address.city}, ${address.postalCode}"),
+                      if (needsUpdate)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Edit alamat ini untuk menambahkan data pengiriman',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange.shade700,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.edit),
+                    icon: Icon(
+                      needsUpdate ? Icons.warning_amber : Icons.edit,
+                      color: needsUpdate ? Colors.orange : null,
+                    ),
                     onPressed: () {
                       Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => AddEditAddressScreen(address: address),

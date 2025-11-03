@@ -25,6 +25,36 @@ class RajaOngkirService {
       throw Exception('Gagal memuat kota');
     }
   }
+
+  // NEW: Calculate shipping cost
+  Future<List<ShippingCourier>> getShippingCost({
+    required String destinationCityId,
+    required int weightInGrams,
+    String courier = 'jne,tiki,pos',
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/shipping-cost'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'destination': destinationCityId,
+        'weight': weightInGrams,
+        'courier': courier,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['success'] == true) {
+        List<dynamic> results = data['results'] ?? [];
+        return results.map((json) => ShippingCourier.fromJson(json)).toList();
+      } else {
+        throw Exception('Gagal mendapatkan ongkos kirim: ${data['error']}');
+      }
+    } else {
+      final errorData = json.decode(response.body);
+      throw Exception('Gagal mendapatkan ongkos kirim: ${errorData['error'] ?? 'Unknown error'}');
+    }
+  }
 }
 
 final rajaOngkirServiceProvider = Provider<RajaOngkirService>((ref) => RajaOngkirService());
