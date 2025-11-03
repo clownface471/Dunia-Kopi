@@ -28,21 +28,63 @@ class AdminOrdersScreen extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ExpansionTile(
                   title: Text("Order #${order.id.substring(0, 6).toUpperCase()}"),
-                  subtitle: Text(dateFormatter.format(order.createdAt.toDate())),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(dateFormatter.format(order.createdAt.toDate())),
+                      Text("Status: ${order.status}", style: TextStyle(
+                        color: order.status == 'Pending' ? Colors.orange : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      )),
+                    ],
+                  ),
                   children: [
+                    // Shipping Information
+                    if (order.shippingAddress != null) ...[
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined),
+                        title: const Text("Alamat Pengiriman", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(order.recipientName ?? '-'),
+                            Text(order.recipientPhone ?? '-'),
+                            Text(order.shippingAddress ?? '-'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (order.courierService != null) ...[
+                      ListTile(
+                        leading: const Icon(Icons.local_shipping_outlined),
+                        title: const Text("Kurir", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(order.courierService ?? '-'),
+                        trailing: order.shippingCost != null 
+                          ? Text(currencyFormatter.format(order.shippingCost))
+                          : null,
+                      ),
+                    ],
+                    const Divider(),
+                    
+                    // Order Items
                     ...order.items.map((item) => ListTile(
+                          leading: Image.network(item.imageUrl, width: 50, height: 50, fit: BoxFit.cover),
                           title: Text("${item.productName} (${item.selectedVariant.weight}gr)"),
+                          subtitle: Text(currencyFormatter.format(item.selectedVariant.price)),
                           trailing: Text("x${item.quantity}"),
                         )),
+                    
+                    // Total
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("Total", style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text("Total", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Text(
                             currencyFormatter.format(order.totalPrice),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ],
                       ),

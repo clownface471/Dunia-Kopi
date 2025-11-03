@@ -6,8 +6,9 @@ class Province {
 
   factory Province.fromJson(Map<String, dynamic> json) {
     return Province(
-      provinceId: json['province_id'],
-      provinceName: json['province'],
+      // PERBAIKAN: Tambahkan null check dan fallback ke string kosong
+      provinceId: json['province_id'] as String? ?? '',
+      provinceName: json['province'] as String? ?? '',
     );
   }
 }
@@ -20,36 +21,14 @@ class City {
 
   factory City.fromJson(Map<String, dynamic> json) {
     return City(
-      cityId: json['city_id'],
-      cityName: json['city_name'],
+      // PERBAIKAN: Tambahkan null check dan fallback ke string kosong
+      cityId: json['city_id'] as String? ?? '',
+      cityName: json['city_name'] as String? ?? '',
     );
   }
 }
 
 // NEW: Shipping Cost Models
-class ShippingCourier {
-  final String code;
-  final String name;
-  final List<ShippingService> services;
-
-  ShippingCourier({
-    required this.code,
-    required this.name,
-    required this.services,
-  });
-
-  factory ShippingCourier.fromJson(Map<String, dynamic> json) {
-    return ShippingCourier(
-      code: json['code'] ?? '',
-      name: json['name'] ?? '',
-      services: (json['services'] as List<dynamic>?)
-              ?.map((s) => ShippingService.fromJson(s))
-              .toList() ??
-          [],
-    );
-  }
-}
-
 class ShippingService {
   final String service;
   final String description;
@@ -62,19 +41,66 @@ class ShippingService {
     required this.description,
     required this.cost,
     required this.etd,
-    this.note = '',
+    required this.note,
   });
 
   factory ShippingService.fromJson(Map<String, dynamic> json) {
+    final costValue = (json['cost'] is int) 
+      ? json['cost'] 
+      : (json['cost'] as num?)?.toInt() ?? 0;
+
     return ShippingService(
-      service: json['service'] ?? '',
-      description: json['description'] ?? '',
-      cost: json['cost'] ?? 0,
-      etd: json['etd'] ?? '',
-      note: json['note'] ?? '',
+      service: json['service'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      cost: costValue,
+      etd: json['etd'] as String? ?? '',
+      note: json['note'] as String? ?? '',
     );
   }
+}
 
-  String get displayName => '$service - $description';
-  String get displayEtd => etd.contains('HARI') ? etd : '$etd hari';
+class CourierOption {
+  final String code;
+  final String name;
+  final List<ShippingService> services;
+
+  CourierOption({
+    required this.code,
+    required this.name,
+    required this.services,
+  });
+
+  factory CourierOption.fromJson(Map<String, dynamic> json) {
+    return CourierOption(
+      code: json['code'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      services: (json['services'] as List<dynamic>?)
+              ?.map((s) => ShippingService.fromJson(s as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class ShippingCostResponse {
+  final bool success;
+  final int weight;
+  final List<CourierOption> results;
+
+  ShippingCostResponse({
+    required this.success,
+    required this.weight,
+    required this.results,
+  });
+
+  factory ShippingCostResponse.fromJson(Map<String, dynamic> json) {
+    return ShippingCostResponse(
+      success: json['success'] as bool? ?? false,
+      weight: (json['weight'] as num?)?.toInt() ?? 0,
+      results: (json['results'] as List<dynamic>?)
+              ?.map((r) => CourierOption.fromJson(r as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
 }

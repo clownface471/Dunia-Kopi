@@ -32,246 +32,36 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isProcessingPayment = false;
-  final String _backendUrl =
-      "https://dunia-kopi-backend.vercel.app/api/create-transaction";
+  final String _backendUrl = "https://dunia-kopi-backend.vercel.app/api/create-transaction";
   final PaymentService _paymentService = PaymentService();
 
-  @override
-  void initState() {
-    super.initState();
-    // Reset checkout state when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(checkoutProvider.notifier).reset();
-    });
-  }
-
-  void _showAddressSelector() {
-    final addressesAsync = ref.read(addressesProvider);
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Pilih Alamat Pengiriman",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const AddEditAddressScreen(),
-                          ));
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: addressesAsync.when(
-                    data: (addresses) {
-                      if (addresses.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.location_off, size: 64, color: Colors.grey),
-                              const SizedBox(height: 16),
-                              const Text("Belum ada alamat tersimpan"),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.add),
-                                label: const Text("Tambah Alamat"),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => const AddEditAddressScreen(),
-                                  ));
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: addresses.length,
-                        itemBuilder: (context, index) {
-                          final address = addresses[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              title: Text(
-                                address.recipientName,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                '${address.phoneNumber}\n${address.formattedAddress}',
-                              ),
-                              isThreeLine: true,
-                              onTap: () {
-                                ref.read(checkoutProvider.notifier).selectAddress(address);
-                                Navigator.of(context).pop();
-                                // Auto-calculate shipping
-                                ref.read(checkoutProvider.notifier).calculateShippingCost();
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, st) => Center(child: Text("Error: $e")),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showCourierSelector() {
-    final checkoutState = ref.read(checkoutProvider);
-    
-    if (checkoutState.availableCouriers.isEmpty) {
+  Future<void> _processPayment() async {
+    if (!kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tidak ada kurir tersedia")),
+        const SnackBar(content: Text("Pembayaran saat ini hanya didukung di versi website.")),
       );
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            final currencyFormatter = NumberFormat.currency(
-              locale: 'id_ID',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            );
-
-            return Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: Text(
-                    "Pilih Kurir Pengiriman",
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: checkoutState.availableCouriers.length,
-                    itemBuilder: (context, courierIndex) {
-                      final courier = checkoutState.availableCouriers[courierIndex];
-                      return ExpansionTile(
-                        title: Text(
-                          courier.name.toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        children: courier.services.map((service) {
-                          return ListTile(
-                            title: Text(service.displayName),
-                            subtitle: Text("Estimasi: ${service.displayEtd}"),
-                            trailing: Text(
-                              currencyFormatter.format(service.cost),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            onTap: () {
-                              ref.read(checkoutProvider.notifier).selectShippingService(
-                                    service: service,
-                                    courierCode: courier.code,
-                                  );
-                              Navigator.of(context).pop();
-                            },
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _processPayment() async {
     final checkoutState = ref.read(checkoutProvider);
     
     // Validation
     if (checkoutState.selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Silakan pilih alamat pengiriman")),
+        const SnackBar(content: Text("Pilih alamat pengiriman terlebih dahulu.")),
       );
       return;
     }
 
-    if (checkoutState.selectedShippingService == null) {
+    if (checkoutState.selectedService == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Silakan pilih kurir pengiriman")),
-      );
-      return;
-    }
-
-    if (!kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pembayaran saat ini hanya didukung di versi website."),
-        ),
+        const SnackBar(content: Text("Pilih layanan pengiriman terlebih dahulu.")),
       );
       return;
     }
 
     final userValue = ref.read(authStateProvider).value;
     final cartItems = ref.read(cartProvider).value ?? [];
-    final subtotal = ref.read(cartTotalPriceProvider);
     final finalTotal = ref.read(finalTotalPriceProvider);
 
     if (userValue == null || cartItems.isEmpty) return;
@@ -282,8 +72,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     try {
       final orderId = 'duniakopi-${DateTime.now().millisecondsSinceEpoch}';
       final String customerEmail = user.email ?? 'guest@duniakopi.com';
-      final String customerName =
-          user.displayName ?? customerEmail.split('@').first;
+      final String customerName = user.displayName ?? customerEmail.split('@').first;
 
       final response = await http.post(
         Uri.parse(_backendUrl),
@@ -313,28 +102,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       _paymentService.startMidtransPayment(transactionToken, (result) async {
         if (result == 'success' || result == 'pending') {
-          // Find courier name from available couriers
-          final selectedCourier = checkoutState.availableCouriers.firstWhere(
-            (c) => c.code == checkoutState.selectedCourierCode,
-            orElse: () => checkoutState.availableCouriers.first,
+          // Create order with shipping details
+          final address = checkoutState.selectedAddress!;
+          final courier = checkoutState.selectedCourier!;
+          final service = checkoutState.selectedService!;
+          
+          await ref.read(orderServiceProvider).createOrder(
+            userId: user.uid,
+            items: cartItems,
+            totalPrice: finalTotal,
+            shippingAddress: '${address.fullAddress}, ${address.city}, ${address.province} ${address.postalCode}',
+            recipientName: address.recipientName,
+            recipientPhone: address.phoneNumber,
+            courierCode: courier.code,
+            courierService: '${courier.name} - ${service.service}',
+            shippingCost: service.cost,
           );
 
-          await ref.read(orderServiceProvider).createOrder(
-                userId: user.uid,
-                items: cartItems,
-                subtotal: subtotal,
-                shippingCost: checkoutState.shippingCost,
-                shippingAddress: checkoutState.selectedAddress!,
-                courierCode: checkoutState.selectedCourierCode!,
-                courierName: selectedCourier.name,
-                courierService: checkoutState.selectedShippingService!.service,
-                courierServiceDescription:
-                    checkoutState.selectedShippingService!.description,
-              );
-          
           // Reset checkout state
           ref.read(checkoutProvider.notifier).reset();
-          
+
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const OrderSuccessScreen()),
@@ -374,11 +161,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final subtotal = ref.watch(cartTotalPriceProvider);
     final checkoutState = ref.watch(checkoutProvider);
     final finalTotal = ref.watch(finalTotalPriceProvider);
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
+    final addressesAsync = ref.watch(addressesProvider);
+    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Checkout")),
@@ -387,180 +171,165 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Address Section
-            _buildSectionHeader("Alamat Pengiriman"),
-            Card(
-              child: InkWell(
-                onTap: _showAddressSelector,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: checkoutState.selectedAddress == null
-                      ? const Row(
-                          children: [
-                            Icon(Icons.add_location_alt_outlined),
-                            SizedBox(width: 16),
-                            Text("Pilih Alamat Pengiriman"),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              checkoutState.selectedAddress!.recipientName,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(checkoutState.selectedAddress!.phoneNumber),
-                            const SizedBox(height: 4),
-                            Text(checkoutState.selectedAddress!.formattedAddress),
-                            if (!checkoutState.selectedAddress!.hasShippingData)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  '⚠️ Alamat ini perlu diperbarui untuk menghitung ongkir',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade700,
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                ),
-              ),
+            // Address Selection Section
+            Text("Alamat Pengiriman", style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            addressesAsync.when(
+              data: (addresses) {
+                if (addresses.isEmpty) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Text("Anda belum memiliki alamat."),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text("Tambah Alamat"),
+                            onPressed: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const AddEditAddressScreen(),
+                              ));
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                
+                return Column(
+                  children: addresses.map((address) {
+                    final isSelected = checkoutState.selectedAddress?.id == address.id;
+                    return Card(
+                      color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.1) : null,
+                      child: RadioListTile<AddressModel>(
+                        value: address,
+                        groupValue: checkoutState.selectedAddress,
+                        onChanged: (value) {
+                          if (value != null) {
+                            ref.read(checkoutProvider.notifier).selectAddress(value);
+                          }
+                        },
+                        title: Text(address.recipientName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("${address.fullAddress}\n${address.city}, ${address.province} ${address.postalCode}\n${address.phoneNumber}"),
+                        isThreeLine: true,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Text("Error: $e"),
             ),
+
+            const SizedBox(height: 24),
+            const Divider(),
             const SizedBox(height: 24),
 
-            // Shipping Section
-            _buildSectionHeader("Kurir Pengiriman"),
+            // Shipping Options Section
+            Text("Pilih Kurir & Layanan", style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            
             if (checkoutState.isLoadingShipping)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              )
+              const Center(child: CircularProgressIndicator())
             else if (checkoutState.shippingError != null)
               Card(
+                color: Colors.red.shade50,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    checkoutState.shippingError!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  child: Text(checkoutState.shippingError!, style: const TextStyle(color: Colors.red)),
                 ),
               )
-            else if (checkoutState.availableCouriers.isEmpty &&
-                checkoutState.selectedAddress != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Text("Belum ada kurir dipilih"),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref.read(checkoutProvider.notifier).calculateShippingCost();
+            else if (checkoutState.shippingOptions != null)
+              ...checkoutState.shippingOptions!.results.map((courier) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: ExpansionTile(
+                    leading: const Icon(Icons.local_shipping_outlined),
+                    title: Text(courier.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    children: courier.services.map((service) {
+                      final isSelected = checkoutState.selectedService == service &&
+                                        checkoutState.selectedCourier == courier;
+                      return RadioListTile<ShippingService>(
+                        value: service,
+                        groupValue: checkoutState.selectedService,
+                        onChanged: (value) {
+                          if (value != null) {
+                            ref.read(checkoutProvider.notifier).selectCourier(courier);
+                            ref.read(checkoutProvider.notifier).selectService(value);
+                          }
                         },
-                        child: const Text("Hitung Ongkir"),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else if (checkoutState.selectedShippingService != null)
-              Card(
-                child: InkWell(
-                  onTap: _showCourierSelector,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                checkoutState.selectedCourierCode!.toUpperCase(),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                checkoutState.selectedShippingService!.displayName,
-                              ),
-                              Text(
-                                "Estimasi: ${checkoutState.selectedShippingService!.displayEtd}",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          currencyFormatter.format(checkoutState.shippingCost),
+                        title: Text("${service.service} - ${service.description}"),
+                        subtitle: Text("Estimasi: ${service.etd} hari"),
+                        secondary: Text(
+                          currencyFormatter.format(service.cost),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).primaryColor,
                           ),
                         ),
-                      ],
-                    ),
+                        selected: isSelected,
+                      );
+                    }).toList(),
                   ),
-                ),
-              )
+                );
+              }).toList()
             else
-              Card(
-                child: InkWell(
-                  onTap: checkoutState.availableCouriers.isNotEmpty
-                      ? _showCourierSelector
-                      : null,
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.local_shipping_outlined),
-                        SizedBox(width: 16),
-                        Text("Pilih Kurir Pengiriman"),
-                      ],
-                    ),
-                  ),
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text("Pilih alamat untuk melihat opsi pengiriman."),
                 ),
               ),
+
+            const SizedBox(height: 24),
+            const Divider(),
             const SizedBox(height: 24),
 
-            // Order Summary
-            _buildSectionHeader("Ringkasan Pesanan"),
+            // Order Summary Section
+Text("Ringkasan Pesanan", style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
             ...cartItems.map((item) => ListTile(
                   leading: Image.network(item.imageUrl, width: 50),
-                  title: Text(
-                    "${item.productName} (${item.selectedVariant.weight}gr)",
-                  ),
-                  subtitle: Text(
-                    "${item.quantity} x ${currencyFormatter.format(item.selectedVariant.price)}",
-                  ),
-                  trailing: Text(
-                    currencyFormatter.format(item.quantity * item.selectedVariant.price),
-                  ),
+                  title: Text("${item.productName} (${item.selectedVariant.weight}gr)"),
+                  subtitle: Text("${item.quantity} x ${currencyFormatter.format(item.selectedVariant.price)}"),
+                  trailing: Text(currencyFormatter.format(item.quantity * item.selectedVariant.price)),
                 )),
             const Divider(height: 32),
-
+            
             // Price Breakdown
-            _buildPriceRow("Subtotal", subtotal, currencyFormatter),
-            _buildPriceRow(
-              "Ongkos Kirim",
-              checkoutState.shippingCost,
-              currencyFormatter,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Subtotal", style: TextStyle(fontSize: 16)),
+                Text(currencyFormatter.format(subtotal), style: const TextStyle(fontSize: 16)),
+              ],
             ),
-            const Divider(),
-            _buildPriceRow(
-              "Total",
-              finalTotal,
-              currencyFormatter,
-              isTotal: true,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Ongkos Kirim", style: TextStyle(fontSize: 16)),
+                Text(
+                  checkoutState.shippingCost > 0 
+                    ? currencyFormatter.format(checkoutState.shippingCost)
+                    : "-",
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Total", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  currencyFormatter.format(finalTotal),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ],
         ),
@@ -570,57 +339,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: _isProcessingPayment
             ? const Center(child: CircularProgressIndicator())
             : ElevatedButton(
-                onPressed: _processPayment,
+                onPressed: checkoutState.selectedAddress != null && 
+                         checkoutState.selectedService != null
+                    ? _processPayment
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  disabledBackgroundColor: Colors.grey,
                 ),
                 child: Text(
                   "Bayar ${currencyFormatter.format(finalTotal)}",
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
-    );
-  }
-
-  Widget _buildPriceRow(
-    String label,
-    double amount,
-    NumberFormat formatter, {
-    bool isTotal = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isTotal ? 18 : 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          Text(
-            formatter.format(amount),
-            style: TextStyle(
-              fontSize: isTotal ? 18 : 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Theme.of(context).primaryColor : null,
-            ),
-          ),
-        ],
       ),
     );
   }

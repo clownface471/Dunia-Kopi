@@ -63,9 +63,9 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
         phoneNumber: '+62${_phoneController.text}',
         fullAddress: _addressController.text,
         city: _selectedCity!.cityName,
-        cityId: _selectedCity!.cityId,
+        cityId: _selectedCity!.cityId, // NEW: Save city ID
         province: _selectedProvince!.provinceName,
-        provinceId: _selectedProvince!.provinceId,
+        provinceId: _selectedProvince!.provinceId, // NEW: Save province ID
         postalCode: _postalCodeController.text,
       );
 
@@ -137,7 +137,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                   itemAsString: (province) => province.provinceName,
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => const Text('Gagal memuat provinsi'),
+                error: (e, st) => Text('Gagal memuat provinsi: $e'),
               ),
               
               _buildDropdown<City>(
@@ -162,9 +162,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                   : ElevatedButton(
                       onPressed: _saveAddress,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16)
                       ),
                       child: const Text("Simpan Alamat"),
                     ),

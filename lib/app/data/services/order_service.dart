@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:duniakopi_project/app/data/models/address_model.dart';
 import 'package:duniakopi_project/app/data/models/cart_item_model.dart';
 import 'package:duniakopi_project/app/data/models/order_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,41 +9,31 @@ class OrderService {
   Future<void> createOrder({
     required String userId,
     required List<CartItemModel> items,
-    required double subtotal,
-    required double shippingCost,
-    required AddressModel shippingAddress,
-    required String courierCode,
-    required String courierName,
-    required String courierService,
-    required String courierServiceDescription,
+    required double totalPrice,
+    String? shippingAddress,
+    String? recipientName,
+    String? recipientPhone,
+    String? courierCode,
+    String? courierService,
+    int? shippingCost,
   }) async {
-    final totalPrice = subtotal + shippingCost;
-
     final newOrder = OrderModel(
       id: '',
       userId: userId,
       items: items,
-      subtotal: subtotal,
-      shippingCost: shippingCost,
       totalPrice: totalPrice,
       createdAt: Timestamp.now(),
-      shippingAddress: ShippingAddress(
-        recipientName: shippingAddress.recipientName,
-        phoneNumber: shippingAddress.phoneNumber,
-        fullAddress: shippingAddress.fullAddress,
-        city: shippingAddress.city,
-        province: shippingAddress.province,
-        postalCode: shippingAddress.postalCode,
-      ),
+      shippingAddress: shippingAddress,
+      recipientName: recipientName,
+      recipientPhone: recipientPhone,
       courierCode: courierCode,
-      courierName: courierName,
       courierService: courierService,
-      courierServiceDescription: courierServiceDescription,
+      shippingCost: shippingCost,
     );
-
+    
     await _db.collection('orders').add(newOrder.toMap());
 
-    // Clear the cart
+    // Clear cart after order creation
     final cartCollection = _db.collection('users').doc(userId).collection('cart');
     final cartSnapshot = await cartCollection.get();
     for (var doc in cartSnapshot.docs) {
@@ -54,17 +43,6 @@ class OrderService {
 
   Stream<List<OrderModel>> getOrders() {
     return _db.collection('orders').orderBy('createdAt', descending: true).snapshots().map(
-          (snapshot) => snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList(),
-        );
-  }
-
-  Stream<List<OrderModel>> getUserOrders(String userId) {
-    return _db
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
           (snapshot) => snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList(),
         );
   }

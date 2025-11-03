@@ -7,52 +7,66 @@ class RajaOngkirService {
   final String _baseUrl = "https://dunia-kopi-backend.vercel.app/api";
 
   Future<List<Province>> getProvinces() async {
-    final response = await http.get(Uri.parse('$_baseUrl/provinces'));
-    if (response.statusCode == 200) {
-      List<dynamic> data = json.decode(response.body);
-      return data.map((json) => Province.fromJson(json)).toList();
-    } else {
-      throw Exception('Gagal memuat provinsi');
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/provinces'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Province.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load provinces: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching provinces: $e');
     }
   }
 
   Future<List<City>> getCities(String provinceId) async {
-    final response = await http.get(Uri.parse('$_baseUrl/cities/$provinceId'));
-    if (response.statusCode == 200) {
-      List<dynamic> data = json.decode(response.body);
-      return data.map((json) => City.fromJson(json)).toList();
-    } else {
-      throw Exception('Gagal memuat kota');
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/cities/$provinceId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((json) => City.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load cities: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching cities: $e');
     }
   }
 
-  // NEW: Calculate shipping cost
-  Future<List<ShippingCourier>> getShippingCost({
+  // NEW: Get Shipping Cost
+  Future<ShippingCostResponse> getShippingCost({
     required String destinationCityId,
-    required int weightInGrams,
-    String courier = 'jne,tiki,pos',
+    required int weight,
+    String courier = 'jne:tiki:pos',
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/shipping-cost'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'destination': destinationCityId,
-        'weight': weightInGrams,
-        'courier': courier,
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/shipping-cost'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'destination': destinationCityId,
+          'weight': weight,
+          'courier': courier,
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        List<dynamic> results = data['results'] ?? [];
-        return results.map((json) => ShippingCourier.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return ShippingCostResponse.fromJson(data);
       } else {
-        throw Exception('Gagal mendapatkan ongkos kirim: ${data['error']}');
+        throw Exception('Failed to calculate shipping cost: ${response.statusCode} - ${response.body}');
       }
-    } else {
-      final errorData = json.decode(response.body);
-      throw Exception('Gagal mendapatkan ongkos kirim: ${errorData['error'] ?? 'Unknown error'}');
+    } catch (e) {
+      throw Exception('Error calculating shipping cost: $e');
     }
   }
 }
